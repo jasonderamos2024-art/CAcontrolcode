@@ -610,18 +610,7 @@
   //   'http://localhost/csc/controller.php'
   //   'http://192.168.1.10/csc/controller.php'  ← your LAN IP
   //   'https://yourtunnel.ngrok.io/controller.php'  ← ngrok tunnel
-  const API_URL = 'http://localhost/csc/controller.php'; // ← CHANGE THIS
-
-  // ── DEBUG helper — shows exactly what's happening ────────────
-  function showDebug(label, detail) {
-    const log = document.getElementById('debugLog');
-    if (!log) return;
-    document.getElementById('debugPanel').style.display = 'block';
-    const entry = document.createElement('div');
-    entry.style.cssText = 'border-bottom:1px solid #ddd;padding:6px 4px;font-size:12px;word-break:break-all;font-family:monospace;';
-    entry.innerHTML = '<strong style="color:#003087">' + label + '</strong><br>' + detail;
-    log.appendChild(entry);
-  }
+  const API_URL = 'http://localhost/csc/controller.php';
 
   const FORMAT_REGEX = /^PACD-CA-\d{4}-\d{4}-\d{4}$/;
 
@@ -633,47 +622,31 @@
 
   async function searchCode() {
     const raw = document.getElementById('codeInput').value.trim().toUpperCase();
-
-    // Clear old debug entries
-    const log = document.getElementById('debugLog');
-    if (log) log.innerHTML = '';
-    document.getElementById('debugPanel') && (document.getElementById('debugPanel').style.display = 'none');
-
     hideAll();
 
-    if (!raw) { showError('Please enter a control code to search.'); return; }
-
-    showDebug('Code entered', raw);
-    showDebug('Format valid', FORMAT_REGEX.test(raw) ? '✅ YES' : '❌ NO — does not match PACD-CA-YYYY-0000-MMDD');
+    if (!raw) {
+      showError('Please enter a control code to search.');
+      return;
+    }
 
     if (!FORMAT_REGEX.test(raw)) {
       showError('Invalid format. Please use: PACD-CA-YYYY-0000-MMDD');
       return;
     }
 
-    const fullUrl = API_URL + '?action=verify_certificate&code=' + encodeURIComponent(raw);
-    showDebug('Fetching URL', fullUrl);
-
     document.getElementById('loadingCard').classList.add('visible');
 
     try {
-      const res  = await fetch(fullUrl);
-      showDebug('HTTP status', res.status + ' ' + res.statusText);
-      const text = await res.text();
-      showDebug('Raw response', text.substring(0, 500));
-      let json;
-      try { json = JSON.parse(text); } catch(e) { hideAll(); showError('Server returned invalid response. Check debug info below.'); return; }
-
+      const res  = await fetch(API_URL + '?action=verify_certificate&code=' + encodeURIComponent(raw));
+      const json = await res.json();
       hideAll();
 
       if (!json.success) {
-        showDebug('Error from server', json.error || '(no error message)');
         showError(json.error || 'The control code entered does not exist in the records.');
         return;
       }
 
       const d = json.data;
-      showDebug('Record found ✅', JSON.stringify(d));
       document.getElementById('rCode').textContent    = d.controlCode;
       document.getElementById('rName').textContent    = d.fullName;
       document.getElementById('rDate').textContent    = d.apdate;
@@ -683,12 +656,14 @@
       resultCard.classList.remove('visible');
       void resultCard.offsetWidth;
       resultCard.classList.add('visible');
-      setTimeout(function() { resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 100);
+
+      setTimeout(function() {
+        resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
 
     } catch (err) {
       hideAll();
-      showDebug('Network/fetch error ❌', err.message || String(err));
-      showError('Could not connect to the verification server. Check debug info below.');
+      showError('Could not connect to the verification server. Please try again later.');
     }
   }
 
@@ -721,15 +696,6 @@
     this.setSelectionRange(pos, pos);
   });
 </script>
-
-<!-- ── DEBUG PANEL (remove before going live) ── -->
-<div id="debugPanel" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:3px solid #003087;z-index:9999;max-height:260px;overflow-y:auto;padding:12px 16px;box-shadow:0 -4px 20px rgba(0,0,0,0.15);">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-    <strong style="font-size:13px;color:#003087;">🔍 Debug Log</strong>
-    <button onclick="document.getElementById('debugPanel').style.display='none'" style="border:none;background:#f0f0f0;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:12px;">Close</button>
-  </div>
-  <div id="debugLog"></div>
-</div>
 
 </body>
 </html>
