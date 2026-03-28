@@ -604,34 +604,13 @@
 </footer>
 
 <script>
-  // Sample data — replace with real records
-  const records = {
-    "PACD-CA-2024-0001-0315": {
-      name: "Juan dela Cruz",
-      date: "March 15, 2024",
-      purpose: "Certificate of Appearance — Staff Training"
-    },
-    "PACD-CA-2024-0002-0420": {
-      name: "Maria Santos",
-      date: "April 20, 2024",
-      purpose: "Document Submission — Audit Review"
-    },
-    "PACD-CA-2025-0003-0110": {
-      name: "Roberto Reyes",
-      date: "January 10, 2025",
-      purpose: "Official Business — Budget Hearing"
-    },
-    "PACD-CA-2025-0004-0630": {
-      name: "Ana Liza Gomez",
-      date: "June 30, 2025",
-      purpose: "Seminar Attendance — Data Privacy"
-    },
-    "PACD-CA-2026-0005-0215": {
-      name: "Edgar Villanueva",
-      date: "February 15, 2026",
-      purpose: "Field Inspection — Infrastructure Project"
-    }
-  };
+  // ── CONFIG ───────────────────────────────────────────────────
+  // Change this to your localhost controller URL.
+  // Examples:
+  //   'http://localhost/csc/controller.php'
+  //   'http://192.168.1.10/csc/controller.php'  ← your LAN IP
+  //   'https://yourtunnel.ngrok.io/controller.php'  ← ngrok tunnel
+  const API_URL = 'http://localhost/csc/controller.php';
 
   const FORMAT_REGEX = /^PACD-CA-\d{4}-\d{4}-\d{4}$/;
 
@@ -641,48 +620,51 @@
     document.getElementById('loadingCard').classList.remove('visible');
   }
 
-  function searchCode() {
+  async function searchCode() {
     const raw = document.getElementById('codeInput').value.trim().toUpperCase();
-
     hideAll();
+
     if (!raw) {
       showError('Please enter a control code to search.');
       return;
     }
 
-    // Show loading briefly
+    if (!FORMAT_REGEX.test(raw)) {
+      showError('Invalid format. Please use: PACD-CA-YYYY-0000-MMDD');
+      return;
+    }
+
     document.getElementById('loadingCard').classList.add('visible');
 
-    setTimeout(function() {
+    try {
+      const res  = await fetch(API_URL + '?action=verify_certificate&code=' + encodeURIComponent(raw));
+      const json = await res.json();
       hideAll();
 
-      if (!FORMAT_REGEX.test(raw)) {
-        showError('Invalid format. Please use: PACD-CA-YYYY-0000-MMDD');
+      if (!json.success) {
+        showError(json.error || 'The control code entered does not exist in the records.');
         return;
       }
 
-      const record = records[raw];
-      if (!record) {
-        showError('The control code entered does not exist in the records.');
-        return;
-      }
-
-      document.getElementById('rCode').textContent = raw;
-      document.getElementById('rName').textContent = record.name;
-      document.getElementById('rDate').textContent = record.date;
-      document.getElementById('rPurpose').textContent = record.purpose;
+      const d = json.data;
+      document.getElementById('rCode').textContent    = d.controlCode;
+      document.getElementById('rName').textContent    = d.fullName;
+      document.getElementById('rDate').textContent    = d.apdate;
+      document.getElementById('rPurpose').textContent = d.purpose;
 
       const resultCard = document.getElementById('resultCard');
       resultCard.classList.remove('visible');
       void resultCard.offsetWidth;
       resultCard.classList.add('visible');
 
-      // Scroll to result
       setTimeout(function() {
         resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 100);
 
-    }, 400);
+    } catch (err) {
+      hideAll();
+      showError('Could not connect to the verification server. Please try again later.');
+    }
   }
 
   function showError(msg) {
