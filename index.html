@@ -552,7 +552,7 @@
       />
     </div>
     <div class="format-hint">
-      Format: <code>PACD-CA-YYYY-0000-MMDD</code>
+      Format: <code>PACD-CA-YYYY-00000-MMDD</code>
     </div>
     <div class="btn-row">
       <button class="btn-search" onclick="searchCode()">
@@ -638,7 +638,7 @@ const API_URL = 'https://cscro6.atwebpages.com/csc/controller.php';
     }
 
     if (!FORMAT_REGEX.test(raw)) {
-      showError('Invalid format. Please use: PACD-CA-YYYY-0000-MMDD');
+      showError('Invalid format. Please use: PACD-CA-YYYY-00000-MMDD');
       return;
     }
 
